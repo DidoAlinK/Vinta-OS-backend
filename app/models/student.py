@@ -71,7 +71,7 @@ class Guardian(db.Model):
         String(36), ForeignKey("students.id"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    relationship: Mapped[str | None] = mapped_column(
+    relationship_type: Mapped[str | None] = mapped_column(
         String(100), comment="Free-form relationship label (Mother, Father, Uncle...)"
     )
     phone: Mapped[str] = mapped_column(String(30), nullable=False)
@@ -84,7 +84,7 @@ class Guardian(db.Model):
     student = relationship("Student", back_populates="guardians")
 
     def __repr__(self):
-        return f"<Guardian {self.name} ({self.relationship})>"
+        return f"<Guardian {self.name} ({self.relationship_type})>"
 
 
 class Enrollment(db.Model):

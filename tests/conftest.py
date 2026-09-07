@@ -216,7 +216,7 @@ def student(db, academy, class_obj, payment_plans):
         id=str(uuid.uuid4()),
         student_id=student.id,
         name="Father",
-        relationship="Father",
+        relationship_type="Father",
         phone="+213555333444",
         is_emergency=True,
     )
