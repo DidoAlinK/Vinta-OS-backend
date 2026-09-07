@@ -43,7 +43,7 @@ class TestTenantIsolation:
 
     def test_cannot_list_other_academy_students(self, client, academy, owner):
         """Student list should only return students from the authenticated academy."""
-        academy2, owner2 = self._create_second_academy(db.session.get.bind)
+        academy2, owner2 = self._create_second_academy(db)
 
         # Login as academy 1 owner
         resp = client.post("/api/auth/login", json={

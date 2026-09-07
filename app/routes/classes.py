@@ -226,7 +226,7 @@ def create_schedule(class_id):
     Body: { day_of_week, start_time, end_time, classroom_id? }
     """
     from flask import g
-    from app.utils.formatters import snap_time_obj, _parse_time
+    from app.services.scheduling_service import snap_time_obj, _parse_time
 
     cls = Class.query.filter_by(id=class_id, academy_id=g.current_academy_id).first()
     if not cls:

@@ -5,7 +5,7 @@ Academy fixtures, tenant context mocks, database setup/teardown.
 import os
 import uuid
 import pytest
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 from sqlalchemy.pool import StaticPool
 
 # Force SQLite BEFORE any app/import reads TEST_DATABASE_URL from .env
@@ -200,8 +200,8 @@ def class_obj(db, academy, teacher, classroom):
         class_id=cls.id,
         classroom_id=classroom.id,
         day_of_week=1,  # Monday
-        start_time="08:00",
-        end_time="09:00",
+        start_time=time(8, 0),
+        end_time=time(9, 0),
     )
     db.session.add(schedule)
 

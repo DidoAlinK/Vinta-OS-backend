@@ -91,10 +91,11 @@ def get_profiles():
 
 
 @auth_bp.route("/verify-pin", methods=["POST"])
-@jwt_required()
 def verify_pin():
     """
     Verify a profile's PIN and return a session token.
+    NO JWT required — the PIN itself is the authentication factor.
+    Used by the profile picker flow: select profile → enter PIN → dashboard.
     Body: { user_id, pin }
     Returns: { access_token, user_id, name, role, academy_id }
     """
