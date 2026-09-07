@@ -165,7 +165,7 @@ def list_guardians(student_id):
             {
                 "id": g.id,
                 "name": g.name,
-                "relationship": g.relationship,
+                "relationship": g.relationship_type,
                 "phone": g.phone,
                 "is_emergency": g.is_emergency,
             }
@@ -198,7 +198,7 @@ def add_guardian(student_id):
         id=str(uuid.uuid4()),
         student_id=student_id,
         name=data["name"],
-        relationship=data.get("relationship"),
+        relationship_type=data.get("relationship"),
         phone=data["phone"],
         is_emergency=data.get("is_emergency", False),
     )
@@ -208,6 +208,6 @@ def add_guardian(student_id):
     return jsonify({
         "id": guardian.id,
         "name": guardian.name,
-        "relationship": guardian.relationship,
+        "relationship": guardian.relationship_type,
         "phone": guardian.phone,
     }), 201

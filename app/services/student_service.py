@@ -40,7 +40,7 @@ def get_student(student_id: str, academy_id: str) -> dict | None:
         {
             "id": g.id,
             "name": g.name,
-            "relationship": g.relationship,
+            "relationship": g.relationship_type,
             "phone": g.phone,
             "is_emergency": g.is_emergency,
         }
