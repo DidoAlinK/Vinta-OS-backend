@@ -40,7 +40,8 @@ class ActivityLog(db.Model):
     description: Mapped[str | None] = mapped_column(
         Text, comment="Human-readable: 'Payment received — Karim M.'"
     )
-    metadata: Mapped[dict | None] = mapped_column(
+    
+    log_metadata: Mapped[dict | None] = mapped_column('metadata',
         JSON, comment="Contextual data: amount, session info, etc."
     )
     created_at: Mapped[datetime] = mapped_column(
