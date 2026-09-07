@@ -97,11 +97,22 @@ def verify_pin():
     NO JWT required — the PIN itself is the authentication factor.
     Used by the profile picker flow: select profile → enter PIN → dashboard.
     Body: { user_id, pin }
+    Headers: X-Academy-Id (required — prevents cross-academy PIN enumeration)
     Returns: { access_token, user_id, name, role, academy_id }
     """
     data = request.get_json()
     if not data or not data.get("user_id") or not data.get("pin"):
         return jsonify({"error": "user_id and pin are required"}), 400
+
+    # Academy validation — replaces JWT for access control
+    academy_id = request.headers.get("X-Academy-Id")
+    if not academy_id:
+        return jsonify({"error": "X-Academy-Id header is required"}), 400
+
+    # Ensure the profile belongs to this academy
+    user = db.session.get(User, data["user_id"])
+    if not user or user.academy_id != academy_id:
+        return jsonify({"error": "Profile not found"}), 401
 
     result = auth_service.authenticate_profile(data["user_id"], data["pin"])
     if not result:
@@ -116,6 +127,7 @@ def create_owner():
     Create the first owner profile during academy setup.
     NO JWT required — this is the bootstrap endpoint.
     Body: { academy_id, name, email, password, pin }
+    Headers: X-Academy-Id (required — must match body academy_id)
     """
     data = request.get_json()
     if not data:
@@ -125,6 +137,13 @@ def create_owner():
     missing = [f for f in required if not data.get(f)]
     if missing:
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
+
+    # Academy header validation — proves caller got academy_id from signup
+    academy_id = request.headers.get("X-Academy-Id")
+    if not academy_id:
+        return jsonify({"error": "X-Academy-Id header is required"}), 400
+    if academy_id != data["academy_id"]:
+        return jsonify({"error": "X-Academy-Id header does not match body"}), 400
 
     # Validate academy exists
     from app.models.academy import Academy

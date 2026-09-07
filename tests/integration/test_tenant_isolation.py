@@ -118,11 +118,11 @@ class TestAuthentication:
         assert resp.status_code == 401
 
     def test_verify_pin_success(self, client, owner, staff):
-        """Valid PIN should return access token."""
+        """Valid PIN with correct academy should return access token."""
         resp = client.post("/api/auth/verify-pin", json={
             "user_id": staff.id,
             "pin": "5678",
-        })
+        }, headers={"X-Academy-Id": staff.academy_id})
         assert resp.status_code == 200
         data = resp.get_json()
         assert "access_token" in data
@@ -133,7 +133,31 @@ class TestAuthentication:
         resp = client.post("/api/auth/verify-pin", json={
             "user_id": staff.id,
             "pin": "0000",
+        }, headers={"X-Academy-Id": staff.academy_id})
+        assert resp.status_code == 401
+
+    def test_verify_pin_missing_academy_header(self, client, owner, staff):
+        """Verify PIN without X-Academy-Id should return 400."""
+        resp = client.post("/api/auth/verify-pin", json={
+            "user_id": staff.id,
+            "pin": "5678",
         })
+        assert resp.status_code == 400
+
+    def test_verify_pin_wrong_academy(self, client, academy, owner, staff):
+        """Verify PIN with wrong academy should return 401."""
+        # Create a second academy
+        from app.models.academy import Academy, AcademySettings, Subscription
+        academy2 = Academy(id=str(uuid.uuid4()), name="Other Academy", email="other@test.com")
+        db.session.add(academy2)
+        db.session.add(AcademySettings(academy_id=academy2.id))
+        db.session.add(Subscription(academy_id=academy2.id, tier="starter", status="active"))
+        db.session.flush()
+
+        resp = client.post("/api/auth/verify-pin", json={
+            "user_id": staff.id,
+            "pin": "5678",
+        }, headers={"X-Academy-Id": academy2.id})
         assert resp.status_code == 401
 
     def test_protected_route_without_token(self, client, academy):
