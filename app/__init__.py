@@ -18,8 +18,13 @@ def create_app(config_name="development"):
     app.config["OPENAPI_VERSION"] = "3.1.0"
     app.config["OPENAPI_URL_PREFIX"] = "/api/docs"
     app.config["OPENAPI_JSON_PATH"] = "openapi.json"
-    app.config["OPENAPI_REDOC_URL"] = None  # Disable ReDoc
+    # Swagger UI: PATH = route path under prefix, URL = CDN for JS/CSS assets
+    app.config["OPENAPI_SWAGGER_UI_PATH"] = "/"
     app.config["OPENAPI_SWAGGER_UI_URL"] = "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.18.2/"
+    app.config["OPENAPI_SWAGGER_UI_CONFIG"] = {"docExpansion": "none"}
+    # Disable ReDoc and RapiDoc (only Swagger UI needed)
+    app.config["OPENAPI_REDOC_URL"] = None
+    app.config["OPENAPI_RAPIDOC_URL"] = None
 
     # Initialize extensions
     db.init_app(app)
