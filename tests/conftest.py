@@ -5,6 +5,7 @@ Academy fixtures, tenant context mocks, database setup/teardown.
 import uuid
 import pytest
 from datetime import date, timedelta
+from sqlalchemy.pool import StaticPool
 from app import create_app
 from app.extensions import db as _db
 from app.models.academy import Academy, AcademySettings, Subscription
@@ -20,8 +21,20 @@ from app.models.audit import ActivityLog
 
 @pytest.fixture(scope="session")
 def app():
-    """Create the Flask application for the entire test session."""
+    """
+    Create the Flask application for the entire test session.
+    Uses SQLite in-memory with StaticPool for fast, isolated tests.
+    """
     app = create_app("testing")
+
+    # Configure SQLite in-memory: StaticPool ensures all connections
+    # share the same in-memory database across the test session
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "connect_args": {"check_same_thread": False},
+        "poolclass": StaticPool,
+    }
+
     with app.app_context():
         _db.create_all()
         yield app

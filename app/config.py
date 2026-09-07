@@ -63,7 +63,7 @@ class TestingConfig(BaseConfig):
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "TEST_DATABASE_URL",
-        "mysql+pymysql://root:password@localhost:3306/vinta_school_test",
+        "sqlite:///:memory:",
     )
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=5)
 
