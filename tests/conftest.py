@@ -2,10 +2,15 @@
 Vinta School OS — Pytest Fixtures
 Academy fixtures, tenant context mocks, database setup/teardown.
 """
+import os
 import uuid
 import pytest
 from datetime import date, timedelta
 from sqlalchemy.pool import StaticPool
+
+# Force SQLite BEFORE any app/import reads TEST_DATABASE_URL from .env
+os.environ["TEST_DATABASE_URL"] = "sqlite:///:memory:"
+
 from app import create_app
 from app.extensions import db as _db
 from app.models.academy import Academy, AcademySettings, Subscription
@@ -26,14 +31,6 @@ def app():
     Uses SQLite in-memory with StaticPool for fast, isolated tests.
     """
     app = create_app("testing")
-
-    # Configure SQLite in-memory: StaticPool ensures all connections
-    # share the same in-memory database across the test session
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
-    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-        "connect_args": {"check_same_thread": False},
-        "poolclass": StaticPool,
-    }
 
     with app.app_context():
         _db.create_all()
