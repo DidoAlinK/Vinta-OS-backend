@@ -40,10 +40,25 @@ def app():
 
 @pytest.fixture(scope="function")
 def db(app):
-    """Fresh database session for each test. Rolls back after each test."""
+    """
+    Fresh database session for each test. Uses a nested transaction (savepoint)
+    that is rolled back after every test for fast, clean isolation.
+
+    CRITICAL: Route handlers call db.session.commit() which would release the
+    savepoint and permanently write data to SQLite. We monkey-patch commit()
+    to flush() so data stays inside the savepoint and rollback() works.
+    """
     with app.app_context():
         _db.session.begin_nested()
+
+        # Prevent route handlers from releasing the savepoint
+        _original_commit = _db.session.commit
+        _db.session.commit = _db.session.flush
+
         yield _db
+
+        # Restore and roll back all test data
+        _db.session.commit = _original_commit
         _db.session.rollback()
 
 

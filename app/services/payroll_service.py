@@ -3,7 +3,7 @@ Vinta School OS — Payroll Service
 Hourly vs. Per-student contract calculations, monthly payroll generation.
 """
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from sqlalchemy import func, desc
 from app.extensions import db
 from app.models.teacher import Teacher, TeacherPayroll, TeacherHoursLog
@@ -27,8 +27,8 @@ def calculate_teacher_payroll(teacher_id: str, period_start: date, period_end: d
             db.session.query(func.sum(TeacherHoursLog.hours))
             .filter(
                 TeacherHoursLog.teacher_id == teacher_id,
-                TeacherHoursLog.created_at >= period_start,
-                TeacherHoursLog.created_at <= period_end,
+                TeacherHoursLog.created_at >= datetime.combine(period_start, datetime.min.time()),
+                TeacherHoursLog.created_at < datetime.combine(period_end + timedelta(days=1), datetime.min.time()),
             )
             .scalar() or 0
         )

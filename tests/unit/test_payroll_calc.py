@@ -58,7 +58,7 @@ class TestHourlyPayroll:
 class TestPerStudentPayroll:
     """Test per-student contract payroll calculations."""
 
-    def test_per_student_rate_calculation(self, db, academy, teacher, class_obj, student):
+    def test_per_student_rate_calculation(self, db, academy, teacher, class_obj, student, session_obj):
         """Per-student payroll = active_students × per_student_rate."""
         # Switch teacher to per-student contract
         teacher.contract_type = "per_student"
