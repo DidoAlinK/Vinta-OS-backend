@@ -110,10 +110,10 @@ def verify_pin():
 
 
 @auth_bp.route("/create-owner", methods=["POST"])
-@jwt_required()
 def create_owner():
     """
     Create the first owner profile during academy setup.
+    NO JWT required — this is the bootstrap endpoint.
     Body: { academy_id, name, email, password, pin }
     """
     data = request.get_json()
@@ -124,6 +124,19 @@ def create_owner():
     missing = [f for f in required if not data.get(f)]
     if missing:
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
+
+    # Validate academy exists
+    from app.models.academy import Academy
+    academy = db.session.get(Academy, data["academy_id"])
+    if not academy:
+        return jsonify({"error": "Academy not found"}), 404
+
+    # Check no owner already exists for this academy
+    existing_owner = User.query.filter_by(
+        academy_id=data["academy_id"], role="owner"
+    ).first()
+    if existing_owner:
+        return jsonify({"error": "Owner already exists for this academy"}), 409
 
     try:
         owner = tenant_service.create_owner_profile(
