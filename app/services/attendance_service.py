@@ -142,13 +142,13 @@ def get_session_roster(session_id: str) -> list:
 
 def add_student_to_session(
     session_id: str, student_id: str, academy_id: str, added_by: str
-) -> SessionStudent:
-    """Add a student to a session roster."""
+) -> tuple[SessionStudent, bool]:
+    """Add a student to a session roster. Returns (record, is_new)."""
     existing = SessionStudent.query.filter_by(
         session_id=session_id, student_id=student_id
     ).first()
     if existing:
-        return existing
+        return existing, False
 
     record = SessionStudent(
         id=str(uuid.uuid4()),
@@ -171,4 +171,4 @@ def add_student_to_session(
     db.session.add(log)
     db.session.flush()
 
-    return record
+    return record, True

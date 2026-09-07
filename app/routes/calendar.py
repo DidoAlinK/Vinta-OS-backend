@@ -162,7 +162,7 @@ def add_student_to_session(session_id):
     if not data or not data.get("student_id"):
         return jsonify({"error": "student_id is required"}), 400
 
-    record = add_student_to_session(
+    record, is_new = add_student_to_session(
         session_id, data["student_id"],
         g.current_academy_id, g.current_user.id
     )
@@ -172,4 +172,4 @@ def add_student_to_session(session_id):
         "id": record.id,
         "student_id": record.student_id,
         "is_present": record.is_present,
-    }), 201
+    }), 201 if is_new else 200

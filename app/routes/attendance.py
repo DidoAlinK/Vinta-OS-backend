@@ -109,13 +109,14 @@ def add_to_session():
     """
     Add a student to a session roster.
     Body: { session_id, student_id }
+    Returns 201 for new, 200 for existing (idempotent).
     """
     from flask import g
     data = request.get_json()
     if not data or not data.get("session_id") or not data.get("student_id"):
         return jsonify({"error": "session_id and student_id are required"}), 400
 
-    record = attendance_service.add_student_to_session(
+    record, is_new = attendance_service.add_student_to_session(
         data["session_id"], data["student_id"],
         g.current_academy_id, g.current_user.id,
     )
@@ -125,4 +126,4 @@ def add_to_session():
         "id": record.id,
         "student_id": record.student_id,
         "is_present": record.is_present,
-    }), 201
+    }), 201 if is_new else 200
