@@ -2,31 +2,31 @@
 Vinta School OS — Auth Blueprint
 /api/auth — Login, Profile Selection, PIN Verification, Academy Signup
 """
-from flask import Blueprint, request, jsonify, g
+from flask_smorest import Blueprint
+from flask import request, jsonify, g
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.extensions import db
 from app.models.user import User
 from app.services import auth_service, tenant_service
+from app.schemas.auth import (
+    SignupRequestSchema, LoginRequestSchema, VerifyPinRequestSchema,
+    CreateOwnerRequestSchema, CreateProfileRequestSchema, ChangePinRequestSchema,
+    TokenResponseSchema, SignupResponseSchema, CreateOwnerResponseSchema,
+    ProfileResponseSchema, ProfileListResponseSchema, MeResponseSchema,
+)
+from app.schemas.base import ErrorSchema, MessageSchema
 
-auth_bp = Blueprint("auth", __name__)
+auth_bp = Blueprint("auth", __name__, description="Authentication & profile management")
 
 
 @auth_bp.route("/signup", methods=["POST"])
-def signup():
+@auth_bp.arguments(SignupRequestSchema)
+@auth_bp.response(201, SignupResponseSchema)
+@auth_bp.doc(responses={400: ("Validation error", ErrorSchema), 500: ("Server error", ErrorSchema)})
+def signup(data):
+    """Create a new academy (tenant provisioning)
+    Creates a new academy with default settings and subscription. Returns the academy ID for the create-owner step.
     """
-    Create a new academy (tenant provisioning).
-    Body: { name, email, password }
-    Returns: { academy_id, name }
-    """
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Request body is required"}), 400
-
-    required = ("name", "email", "password")
-    missing = [f for f in required if not data.get(f)]
-    if missing:
-        return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
-
     try:
         result = tenant_service.create_academy(
             name=data["name"],
@@ -34,36 +34,37 @@ def signup():
             password=data["password"],
         )
         db.session.commit()
-        return jsonify(result), 201
+        return result, 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
 
 @auth_bp.route("/login", methods=["POST"])
-def login():
+@auth_bp.arguments(LoginRequestSchema)
+@auth_bp.response(200, TokenResponseSchema)
+@auth_bp.doc(responses={400: ("Validation error", ErrorSchema), 401: ("Invalid credentials", ErrorSchema)})
+def login(data):
+    """Owner login with email + password
+    Authenticates the academy owner and returns JWT tokens. Use the access_token in subsequent requests as `Authorization: Bearer <token>`.
     """
-    Owner login with email + password.
-    Body: { email, password }
-    Returns: { access_token, refresh_token, user_id, name, role, academy_id }
-    """
-    data = request.get_json()
-    if not data or not data.get("email") or not data.get("password"):
-        return jsonify({"error": "Email and password are required"}), 400
-
     result = auth_service.authenticate_owner(data["email"], data["password"])
     if not result:
         return jsonify({"error": "Invalid email or password"}), 401
-
-    return jsonify(result), 200
+    return result, 200
 
 
 @auth_bp.route("/profiles", methods=["GET"])
 @jwt_required()
+@auth_bp.response(200, ProfileListResponseSchema)
+@auth_bp.doc(
+    security=[{"Bearer": []}],
+    parameters=[{"in": "header", "name": "X-Academy-Id", "required": True, "schema": {"type": "string"}, "description": "Academy ID"}],
+    responses={400: ("Missing academy header", ErrorSchema), 403: ("Access denied", ErrorSchema)},
+)
 def get_profiles():
-    """
-    Get all active profiles for the current user's academy.
-    Requires X-Academy-Id header.
+    """Get all active profiles for the academy
+    Returns all user profiles (owner + staff) for the profile picker screen. Requires JWT and X-Academy-Id header.
     """
     academy_id = request.headers.get("X-Academy-Id")
     if not academy_id:
@@ -91,25 +92,20 @@ def get_profiles():
 
 
 @auth_bp.route("/verify-pin", methods=["POST"])
-def verify_pin():
+@auth_bp.arguments(VerifyPinRequestSchema)
+@auth_bp.response(200, TokenResponseSchema)
+@auth_bp.doc(
+    parameters=[{"in": "header", "name": "X-Academy-Id", "required": True, "schema": {"type": "string"}, "description": "Academy ID — validates the profile belongs to this academy"}],
+    responses={400: ("Missing header", ErrorSchema), 401: ("Invalid PIN or profile", ErrorSchema)},
+)
+def verify_pin(data):
+    """Verify a profile's PIN and return a session token
+    **No JWT required** — the PIN itself is the authentication factor. Used by the profile picker flow: select profile → enter PIN → dashboard. Requires X-Academy-Id header to prevent cross-academy PIN enumeration.
     """
-    Verify a profile's PIN and return a session token.
-    NO JWT required — the PIN itself is the authentication factor.
-    Used by the profile picker flow: select profile → enter PIN → dashboard.
-    Body: { user_id, pin }
-    Headers: X-Academy-Id (required — prevents cross-academy PIN enumeration)
-    Returns: { access_token, user_id, name, role, academy_id }
-    """
-    data = request.get_json()
-    if not data or not data.get("user_id") or not data.get("pin"):
-        return jsonify({"error": "user_id and pin are required"}), 400
-
-    # Academy validation — replaces JWT for access control
     academy_id = request.headers.get("X-Academy-Id")
     if not academy_id:
         return jsonify({"error": "X-Academy-Id header is required"}), 400
 
-    # Ensure the profile belongs to this academy
     user = db.session.get(User, data["user_id"])
     if not user or user.academy_id != academy_id:
         return jsonify({"error": "Profile not found"}), 401
@@ -118,40 +114,31 @@ def verify_pin():
     if not result:
         return jsonify({"error": "Invalid PIN"}), 401
 
-    return jsonify(result), 200
+    return result, 200
 
 
 @auth_bp.route("/create-owner", methods=["POST"])
-def create_owner():
+@auth_bp.arguments(CreateOwnerRequestSchema)
+@auth_bp.response(201, CreateOwnerResponseSchema)
+@auth_bp.doc(
+    parameters=[{"in": "header", "name": "X-Academy-Id", "required": True, "schema": {"type": "string"}, "description": "Must match body academy_id"}],
+    responses={400: ("Validation error", ErrorSchema), 404: ("Academy not found", ErrorSchema), 409: ("Owner already exists", ErrorSchema)},
+)
+def create_owner(data):
+    """Create the first owner profile during academy setup
+    **No JWT required** — this is the bootstrap endpoint called after academy signup. Requires X-Academy-Id header matching the body academy_id. Can only be called once per academy (409 if owner exists).
     """
-    Create the first owner profile during academy setup.
-    NO JWT required — this is the bootstrap endpoint.
-    Body: { academy_id, name, email, password, pin }
-    Headers: X-Academy-Id (required — must match body academy_id)
-    """
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Request body is required"}), 400
-
-    required = ("academy_id", "name", "email", "password", "pin")
-    missing = [f for f in required if not data.get(f)]
-    if missing:
-        return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
-
-    # Academy header validation — proves caller got academy_id from signup
     academy_id = request.headers.get("X-Academy-Id")
     if not academy_id:
         return jsonify({"error": "X-Academy-Id header is required"}), 400
     if academy_id != data["academy_id"]:
         return jsonify({"error": "X-Academy-Id header does not match body"}), 400
 
-    # Validate academy exists
     from app.models.academy import Academy
     academy = db.session.get(Academy, data["academy_id"])
     if not academy:
         return jsonify({"error": "Academy not found"}), 404
 
-    # Check no owner already exists for this academy
     existing_owner = User.query.filter_by(
         academy_id=data["academy_id"], role="owner"
     ).first()
@@ -180,22 +167,21 @@ def create_owner():
 
 @auth_bp.route("/create-profile", methods=["POST"])
 @jwt_required()
-def create_profile():
+@auth_bp.arguments(CreateProfileRequestSchema)
+@auth_bp.response(201, ProfileResponseSchema)
+@auth_bp.doc(
+    security=[{"Bearer": []}],
+    responses={400: ("Validation error", ErrorSchema), 401: ("PIN required", ErrorSchema), 403: ("Owner access required", ErrorSchema)},
+)
+def create_profile(data):
+    """Create a new staff/owner profile (owner-only action)
+    Creates a new user profile with PIN for the profile picker. Requires JWT (owner role) and owner PIN verification in the request body.
     """
-    Create a new staff/owner profile (owner-only action).
-    Body: { name, pin, role?, phone? }
-    Requires owner PIN verification.
-    """
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Request body is required"}), 400
-
     user_id = get_jwt_identity()
     user = db.session.get(User, user_id)
     if not user or user.role != "owner":
         return jsonify({"error": "Owner access required"}), 403
 
-    # Verify owner PIN
     pin = data.get("owner_pin")
     if not pin or not user.verify_pin(pin):
         return jsonify({"error": "Owner PIN verification required"}), 401
@@ -226,27 +212,28 @@ def create_profile():
 
 @auth_bp.route("/change-pin", methods=["POST"])
 @jwt_required()
-def change_pin():
+@auth_bp.arguments(ChangePinRequestSchema)
+@auth_bp.response(200, MessageSchema)
+@auth_bp.doc(security=[{"Bearer": []}], responses={400: ("Validation error", ErrorSchema), 401: ("Invalid PIN", ErrorSchema)})
+def change_pin(data):
+    """Change the current user's PIN
+    Requires JWT. Must provide old PIN for verification and new PIN.
     """
-    Change a user's PIN.
-    Body: { old_pin, new_pin }
-    """
-    data = request.get_json()
-    if not data or not data.get("old_pin") or not data.get("new_pin"):
-        return jsonify({"error": "old_pin and new_pin are required"}), 400
-
     user_id = get_jwt_identity()
     success = auth_service.change_pin(user_id, data["old_pin"], data["new_pin"])
     if not success:
         return jsonify({"error": "Invalid current PIN"}), 401
-
     return jsonify({"message": "PIN changed successfully"}), 200
 
 
 @auth_bp.route("/me", methods=["GET"])
 @jwt_required()
+@auth_bp.response(200, MeResponseSchema)
+@auth_bp.doc(security=[{"Bearer": []}], responses={404: ("User not found", ErrorSchema)})
 def get_current_user():
-    """Get the current authenticated user's profile."""
+    """Get the current authenticated user's profile
+    Requires JWT. Returns full profile details for the authenticated user.
+    """
     user_id = get_jwt_identity()
     user = auth_service.get_current_user(user_id)
     if not user:

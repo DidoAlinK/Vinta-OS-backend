@@ -3,15 +3,25 @@ Vinta School OS — Settings Blueprint
 /api/settings — Academy Config, Staff Management, Automations, Profile
 """
 import uuid
-from flask import Blueprint, request, jsonify
+from flask_smorest import Blueprint
+from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.extensions import db
 from app.utils.decorators import tenant_required, owner_only
 from app.models.user import User
 from app.models.academy import Academy, AcademySettings, Subscription
 from app.services import tenant_service, auth_service, export_service
+from app.schemas.settings import (
+    UpdateAcademyRequestSchema, UpdateAppearanceRequestSchema,
+    UpdateBillingConfigRequestSchema, UpdateAutomationsRequestSchema,
+    AddStaffRequestSchema, UpdateStaffRequestSchema, UpdateProfileRequestSchema,
+    AcademyResponseSchema, AppearanceResponseSchema, BillingConfigResponseSchema,
+    AutomationsResponseSchema, StaffListResponseSchema, AddStaffResponseSchema,
+    ProfileResponseSchema, SubscriptionResponseSchema,
+)
+from app.schemas.base import ErrorSchema, MessageSchema
 
-settings_bp = Blueprint("settings", __name__)
+settings_bp = Blueprint("settings", __name__, description="Academy settings, staff & subscriptions")
 
 
 @settings_bp.route("/academy", methods=["GET"])

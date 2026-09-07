@@ -2,13 +2,20 @@
 Vinta School OS — Attendance Blueprint
 /api/attendance — Check-in/out, PIN attribution
 """
-from flask import Blueprint, request, jsonify
+from flask_smorest import Blueprint
+from flask import request, jsonify
 from flask_jwt_extended import jwt_required
 from app.extensions import db
 from app.utils.decorators import tenant_required, verify_staff_pin
 from app.services import attendance_service
+from app.schemas.attendance import (
+    CheckInRequestSchema, CheckOutRequestSchema, AutoCheckoutRequestSchema,
+    AddToSessionRequestSchema, CheckInResponseSchema, CheckOutResponseSchema,
+    AutoCheckoutResponseSchema, RosterResponseSchema, AddToSessionResponseSchema,
+)
+from app.schemas.base import ErrorSchema, MessageSchema
 
-attendance_bp = Blueprint("attendance", __name__)
+attendance_bp = Blueprint("attendance", __name__, description="Student attendance check-in/out")
 
 
 @attendance_bp.route("/check-in", methods=["POST"])

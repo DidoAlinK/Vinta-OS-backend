@@ -2,13 +2,21 @@
 Vinta School OS — Billing Blueprint
 /api/billing — Payment Plans, Cycles, Installments, Overdue, Revenue
 """
-from flask import Blueprint, request, jsonify
+from flask_smorest import Blueprint
+from flask import request, jsonify
 from flask_jwt_extended import jwt_required
 from app.extensions import db
 from app.utils.decorators import tenant_required
 from app.services import billing_service
+from app.schemas.billing import (
+    CreatePlanRequestSchema, RecordPaymentRequestSchema,
+    PaymentPlanListResponseSchema, StudentBillingListResponseSchema,
+    BillingStatsResponseSchema, RevenueChartResponseSchema,
+    AgingBucketsResponseSchema, PayrollListResponseSchema, RecordPaymentResponseSchema,
+)
+from app.schemas.base import ErrorSchema, MessageSchema
 
-billing_bp = Blueprint("billing", __name__)
+billing_bp = Blueprint("billing", __name__, description="Payment plans, billing cycles & payroll")
 
 
 @billing_bp.route("/plans", methods=["GET"])

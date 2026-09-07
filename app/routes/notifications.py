@@ -4,13 +4,19 @@ Vinta School OS — Notifications Blueprint
 """
 import uuid
 from datetime import datetime, timezone
-from flask import Blueprint, request, jsonify
+from flask_smorest import Blueprint
+from flask import request, jsonify
 from flask_jwt_extended import jwt_required
 from app.extensions import db
 from app.utils.decorators import tenant_required
 from app.models.notification import Notification
+from app.schemas.notifications import (
+    CreateNotificationRequestSchema, NotificationListResponseSchema,
+    UnreadCountResponseSchema, CreateNotificationResponseSchema,
+)
+from app.schemas.base import ErrorSchema, MessageSchema
 
-notifications_bp = Blueprint("notifications", __name__)
+notifications_bp = Blueprint("notifications", __name__, description="In-app notifications & broadcasts")
 
 
 @notifications_bp.route("", methods=["GET"])

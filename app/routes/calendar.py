@@ -3,13 +3,20 @@ Vinta School OS — Calendar Blueprint
 /api/calendar, /api/sessions — Week/Month views, drag-to-move, edge-resize, create
 """
 from datetime import date, timedelta
-from flask import Blueprint, request, jsonify
+from flask_smorest import Blueprint
+from flask import request, jsonify
 from flask_jwt_extended import jwt_required
 from app.extensions import db
 from app.utils.decorators import tenant_required
 from app.services import scheduling_service
+from app.schemas.calendar import (
+    CreateSessionRequestSchema, UpdateSessionRequestSchema,
+    WeekSessionsResponseSchema, DaySessionsResponseSchema,
+    CreateSessionResponseSchema, UpdateSessionResponseSchema,
+)
+from app.schemas.base import ErrorSchema, MessageSchema
 
-calendar_bp = Blueprint("calendar", __name__)
+calendar_bp = Blueprint("calendar", __name__, description="Calendar views & session management")
 
 
 @calendar_bp.route("/calendar/week", methods=["GET"])

@@ -3,14 +3,21 @@ Vinta School OS — Teachers Blueprint
 /api/teachers — CRUD, Contracts, Payroll Summaries
 """
 import uuid
-from flask import Blueprint, request, jsonify
+from flask_smorest import Blueprint
+from flask import request, jsonify
 from flask_jwt_extended import jwt_required
 from app.extensions import db
 from app.utils.decorators import tenant_required
 from app.models.teacher import Teacher
 from app.services import payroll_service
+from app.schemas.teachers import (
+    CreateTeacherRequestSchema, UpdateTeacherRequestSchema,
+    TeacherListResponseSchema, TeacherStatsResponseSchema,
+    TeacherProfileResponseSchema, CreateTeacherResponseSchema,
+)
+from app.schemas.base import ErrorSchema, MessageSchema
 
-teachers_bp = Blueprint("teachers", __name__)
+teachers_bp = Blueprint("teachers", __name__, description="Teacher management & payroll")
 
 
 @teachers_bp.route("", methods=["GET"])

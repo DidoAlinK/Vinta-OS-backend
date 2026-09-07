@@ -3,15 +3,23 @@ Vinta School OS — Classes Blueprint
 /api/classes, /api/classrooms — Class & Classroom CRUD, Schedules
 """
 import uuid
-from flask import Blueprint, request, jsonify
+from flask_smorest import Blueprint
+from flask import request, jsonify
 from flask_jwt_extended import jwt_required
 from app.extensions import db
 from app.utils.decorators import tenant_required
 from app.models.class_room import Classroom, Class, Subject
 from app.models.scheduling import Schedule
 from app.services import scheduling_service
+from app.schemas.classes import (
+    CreateClassRequestSchema, CreateClassroomRequestSchema,
+    CreateScheduleRequestSchema, ClassListResponseSchema,
+    ClassroomListResponseSchema, CreateScheduleResponseSchema,
+    CreateClassResponseSchema,
+)
+from app.schemas.base import ErrorSchema, MessageSchema
 
-classes_bp = Blueprint("classes", __name__)
+classes_bp = Blueprint("classes", __name__, description="Classes, classrooms & recurring schedules")
 
 
 # ── Classrooms ──────────────────────────────────────────────────────

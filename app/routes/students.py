@@ -2,13 +2,20 @@
 Vinta School OS — Students Blueprint
 /api/students — CRUD, Guardians, Profile Drawer, Enrollment
 """
-from flask import Blueprint, request, jsonify
+from flask_smorest import Blueprint
+from flask import request, jsonify
 from flask_jwt_extended import jwt_required
 from app.extensions import db
 from app.utils.decorators import tenant_required
 from app.services import student_service
+from app.schemas.students import (
+    CreateStudentRequestSchema, UpdateStudentRequestSchema, EnrollStudentRequestSchema,
+    AddGuardianRequestSchema, StudentListResponseSchema, StudentStatsResponseSchema,
+    StudentProfileResponseSchema, CreateStudentResponseSchema, EnrollResponseSchema,
+)
+from app.schemas.base import ErrorSchema, MessageSchema
 
-students_bp = Blueprint("students", __name__)
+students_bp = Blueprint("students", __name__, description="Student management")
 
 
 @students_bp.route("", methods=["GET"])

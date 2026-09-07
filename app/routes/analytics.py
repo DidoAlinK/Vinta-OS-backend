@@ -4,13 +4,16 @@ Vinta School OS — Analytics Blueprint
 """
 import csv
 import io
-from flask import Blueprint, request, jsonify, Response
+from flask_smorest import Blueprint
+from flask import request, jsonify, Response
 from flask_jwt_extended import jwt_required
 from app.extensions import db
 from app.utils.decorators import tenant_required
 from app.services import billing_service, export_service
+from app.schemas.analytics import DashboardResponseSchema, RevenueChartResponseSchema
+from app.schemas.base import ErrorSchema
 
-analytics_bp = Blueprint("analytics", __name__)
+analytics_bp = Blueprint("analytics", __name__, description="Dashboard analytics & CSV export")
 
 
 @analytics_bp.route("/dashboard", methods=["GET"])
